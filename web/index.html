@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Задача №129</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .result, .error {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+    }
+
+    .result {
+      background: #ecf9ec;
+      color: #2d6a2d;
+      white-space: pre-wrap;
+    }
+
+    .error {
+      background: #fbeaea;
+      color: #a94442;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Вычислительная задача №129</h2>
+
+    <div class="form-group">
+      <label for="a">a:</label>
+      <input type="number" id="a" value="1" step="any">
+    </div>
+
+    <div class="form-group">
+      <label for="c">c (начало отрезка):</label>
+      <input type="number" id="c" value="0" step="any">
+    </div>
+
+    <div class="form-group">
+      <label for="d">d (конец отрезка):</label>
+      <input type="number" id="d" value="3" step="any">
+    </div>
+
+    <div class="form-group">
+      <label for="e">E (точность):</label>
+      <input type="number" id="e" value="0.001" step="any">
+    </div>
+
+    <button onclick="calculate()">Вычислить</button>
+
+    <div id="result" class="result" style="display:none;"></div>
+    <div id="error" class="error" style="display:none;"></div>
+  </div>
+
+  <script>
+    async function calculate() {
+      const a = parseFloat(document.getElementById("a").value);
+      const c = parseFloat(document.getElementById("c").value);
+      const d = parseFloat(document.getElementById("d").value);
+      const e = parseFloat(document.getElementById("e").value);
+
+      const resultEl = document.getElementById("result");
+      const errorEl = document.getElementById("error");
+
+      resultEl.style.display = "none";
+      errorEl.style.display = "none";
+
+      try {
+        const response = await fetch('http://localhost:8080/solve', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ a, c, d, e })
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error("Ошибка сервера: " + text);
+        }
+
+        const data = await response.json();
+        resultEl.textContent =
+          `y(a) = ${data.y_a.toFixed(6)}\n` +
+          `z_max = ${data.z_max.toFixed(6)}\n` +
+          `f(z_max) = ${data.f_z_max.toFixed(6)}\n` +
+          `Площадь (Симпсон) = ${data.area_simpson.toFixed(6)}\n` +
+          `Площадь (трапеции) = ${data.area_trapezoid.toFixed(6)}\n` +
+          `Корень F(z)=0: ${data.zero_point.toFixed(6)}`;
+        resultEl.style.display = "block";
+      } catch (err) {
+        errorEl.textContent = "Ошибка: " + err.message;
+        errorEl.style.display = "block";
+      }
+    }
+  </script>
+</body>
+</html>
