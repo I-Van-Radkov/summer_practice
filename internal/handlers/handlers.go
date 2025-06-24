@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"sync"
 
 	"github.com/I-Van-Radkov/summer_practice/internal/logic"
 	"github.com/I-Van-Radkov/summer_practice/internal/models"
@@ -16,17 +15,34 @@ func SolveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(4)
+	yA, err := logic.RungeKutta(input.A, 0, 1, input.E)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	yA := logic.RungeKutta(input.A, 0, 1, input.E)
+	zMax, fZMax, err := logic.FindMaximumParallel(input.C, input.D, input.E, yA)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	zMax, fZMax := logic.FindMaximumParallel(input.C, input.D, input.E, yA)
+	areaSimpson, err := logic.IntegrateSimpsonParallel(input.C, zMax, input.E, yA)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	areaTrapezoid, err := logic.IntegrateTrapezoidParallel(input.C, zMax, input.E, yA)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	areaSimpson := logic.IntegrateSimpsonParallel(input.C, zMax, input.E, yA)
-	areaTrapezoid := logic.IntegrateTrapezoidParallel(input.C, zMax, input.E, yA)
-
-	root := logic.FindRoot(input.C, input.D, input.E, yA)
+	root, err := logic.FindRoot(input.C, input.D, input.E, yA)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	response := models.Output{
 		YA:        yA,

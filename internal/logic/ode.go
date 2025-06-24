@@ -1,11 +1,19 @@
 package logic
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
-func RungeKutta(xEnd, x0, y0 float64, eps float64) float64 {
+// RungeKutta решает ОДУ y' = 3x*y методом Рунге-Кутты 4-го порядка
+func RungeKutta(xEnd, x0, y0, eps float64) (float64, error) {
+	if eps <= 0 {
+		return 0, fmt.Errorf("epsilon must be positive")
+	}
+
 	y := y0
 	x := x0
-	h := 0.01
+	h := 0.1 // Начальный шаг
 
 	for x < xEnd {
 		if x+h > xEnd {
@@ -18,14 +26,21 @@ func RungeKutta(xEnd, x0, y0 float64, eps float64) float64 {
 		k4 := h * fODE(x+h, y+k3)
 
 		yNext := y + (k1+2*k2+2*k3+k4)/6
-		if math.Abs(yNext-y) < eps {
+		errorEstimate := math.Abs(yNext - y)
+
+		if errorEstimate < eps {
 			y = yNext
 			x += h
+			// Увеличиваем шаг если ошибка мала
+			if errorEstimate < eps/10 {
+				h *= 1.5
+			}
 		} else {
+			// Уменьшаем шаг если ошибка велика
 			h /= 2
 		}
 	}
-	return y
+	return y, nil
 }
 
 func fODE(x, y float64) float64 {
