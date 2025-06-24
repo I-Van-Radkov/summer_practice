@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: sans-serif;
-      max-width: 800px;
+      max-width: 1200px;
       margin: 30px auto;
       padding: 20px;
       background: #f9f9f9;
@@ -22,6 +22,7 @@
       width: 100%;
       padding: 8px;
       margin-top: 5px;
+      box-sizing: border-box;
     }
 
     button {
@@ -31,23 +32,66 @@
       color: white;
       border: none;
       cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background: #2980b9;
     }
 
     .result {
       margin-top: 20px;
-      padding: 15px;
+      padding: 20px;
       background: #fff;
       border: 1px solid #ddd;
       border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .result p {
+      margin: 10px 0;
+      font-size: 16px;
+    }
+
+    .chart-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .chart-box {
+      flex: 1 1 45%;
+      min-width: 300px;
+      background: white;
+      padding: 15px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     canvas {
-      margin-top: 30px;
+      width: 100% !important;
+      height: 300px !important;
     }
 
     .error {
       color: red;
       margin-top: 20px;
+      padding: 10px;
+      background: #ffebee;
+      border-radius: 4px;
+    }
+
+    h2 {
+      margin-top: 30px;
+      color: #2c3e50;
+    }
+
+    .method-info {
+      margin-top: 15px;
+      padding: 15px;
+      background: #e8f4f8;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -55,25 +99,50 @@
   <h1>Вычислительная задача №129</h1>
 
   <form id="calcForm">
-    <label>Параметр a: <input type="number" id="a" step="any" required></label>
-    <label>Начало отрезка c: <input type="number" id="c" step="any" required></label>
-    <label>Конец отрезка d: <input type="number" id="d" step="any" required></label>
-    <label>Точность e: <input type="number" id="e" step="any" min="0.000001" required></label>
+    <label>Параметр a: <input type="number" id="a" step="any" value="1" required></label>
+    <label>Начало отрезка c: <input type="number" id="c" step="any" value="0" required></label>
+    <label>Конец отрезка d: <input type="number" id="d" step="any" value="3" required></label>
+    <label>Точность e: <input type="number" id="e" step="any" min="0.000001" value="0.001" required></label>
     <button type="submit">Вычислить</button>
   </form>
 
   <div class="error" id="errorMsg"></div>
 
   <div class="result" id="results" style="display:none">
+    <h2>Результаты вычислений</h2>
     <p><strong>y(a):</strong> <span id="ya"></span></p>
     <p><strong>z<sub>max</sub>:</strong> <span id="zmax"></span></p>
     <p><strong>F(z<sub>max</sub>):</strong> <span id="fzmax"></span></p>
     <p><strong>Площадь (трапеции):</strong> <span id="areaTrap"></span></p>
     <p><strong>Площадь (Симпсон):</strong> <span id="areaSimp"></span></p>
+    <p><strong>Разница методов:</strong> <span id="diff"></span></p>
     <p><strong>Корень уравнения F(z)=0:</strong> <span id="root"></span></p>
+    
+    <div class="method-info">
+      <h3>Информация о методах</h3>
+      <p><strong>Метод трапеций:</strong> Простой метод численного интегрирования, основанный на аппроксимации площади под кривой трапециями.</p>
+      <p><strong>Метод Симпсона:</strong> Более точный метод, использующий квадратичную интерполяцию. Обычно требует меньше вычислений для достижения той же точности.</p>
+    </div>
   </div>
 
-  <canvas id="chart" width="600" height="300" style="display:none;"></canvas>
+  <div class="chart-container" id="charts" style="display:none">
+    <div class="chart-box">
+      <h3>График функции F(z)</h3>
+      <canvas id="chartFunc"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>График производной F'(z)</h3>
+      <canvas id="chartDerivative"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>График площади под кривой</h3>
+      <canvas id="chartArea"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>График поиска корня</h3>
+      <canvas id="chartRoot"></canvas>
+    </div>
+  </div>
 
   <script>
     const form = document.getElementById("calcForm");
@@ -119,14 +188,17 @@
 
         // Отобразим данные
         document.getElementById("results").style.display = "block";
+        document.getElementById("charts").style.display = "flex";
+        
         document.getElementById("ya").textContent = data.y_a.toFixed(6);
         document.getElementById("zmax").textContent = data.z_max.toFixed(6);
         document.getElementById("fzmax").textContent = data.f_z_max.toFixed(6);
         document.getElementById("areaTrap").textContent = data.area_trapezoid.toFixed(6);
         document.getElementById("areaSimp").textContent = data.area_simpson.toFixed(6);
+        document.getElementById("diff").textContent = Math.abs(data.area_trapezoid - data.area_simpson).toFixed(6);
         document.getElementById("root").textContent = data.zero_point.toFixed(6);
 
-        drawChart(data);
+        drawCharts(data, payload);
 
       } catch (err) {
         console.error(err);
@@ -134,21 +206,59 @@
       }
     });
 
-    function drawChart(data) {
-      const ctx = document.getElementById("chart").getContext("2d");
-      document.getElementById("chart").style.display = "block";
+    function drawCharts(data, input) {
+      // Функция F(z) из задания
+      function F(z, yA) {
+        return 15 + Math.pow(Math.sin(z), 3) + yA*z - Math.pow(z, 2)/yA;
+      }
 
+      // Производная F'(z) - для демонстрации
+      function F_derivative(z, yA, h = 0.0001) {
+        return (F(z + h, yA) - F(z - h, yA)) / (2 * h);
+      }
+
+      // График функции F(z)
+      drawChart(
+        "chartFunc", 
+        "F(z) = 15 + sin³(z) + y(a)*z - z²/y(a)", 
+        z => F(z, data.y_a),
+        input.c, input.d, 0.1
+      );
+
+      // График производной F'(z)
+      drawChart(
+        "chartDerivative", 
+        "F'(z) - производная функции", 
+        z => F_derivative(z, data.y_a),
+        input.c, input.d, 0.1
+      );
+
+      // График площади под кривой
+      drawAreaChart(
+        "chartArea",
+        "Площадь под кривой F(z)",
+        z => F(z, data.y_a),
+        input.c, data.z_max
+      );
+
+      // График поиска корня
+      drawRootChart(
+        "chartRoot",
+        "Поиск корня F(z) = 0",
+        z => F(z, data.y_a),
+        input.c, input.d, data.zero_point
+      );
+    }
+
+    function drawChart(canvasId, label, func, start, end, step) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      
       const xVals = [];
       const yVals = [];
-
-      const zStart = data.zero_point - 2;
-      const zEnd = data.zero_point + 2;
-      const step = 0.1;
-
-      for (let z = zStart; z <= zEnd; z += step) {
+      
+      for (let z = start; z <= end; z += step) {
         xVals.push(z.toFixed(2));
-        const fz = (data.y_a * Math.sin(z)).toFixed(6); // <-- примерная функция, адаптируй под свою!
-        yVals.push(fz);
+        yVals.push(func(z));
       }
 
       new Chart(ctx, {
@@ -156,10 +266,11 @@
         data: {
           labels: xVals,
           datasets: [{
-            label: "F(z)",
+            label: label,
             data: yVals,
             fill: false,
             borderColor: "#3498db",
+            borderWidth: 2,
             tension: 0.1
           }]
         },
@@ -167,7 +278,168 @@
           responsive: true,
           plugins: {
             legend: {
-              display: true
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'z'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'F(z)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function drawAreaChart(canvasId, label, func, start, end) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      const step = (end - start) / 100;
+      
+      const xVals = [];
+      const yVals = [];
+      
+      for (let z = start; z <= end; z += step) {
+        xVals.push(z.toFixed(2));
+        yVals.push(func(z));
+      }
+
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: xVals,
+          datasets: [{
+            label: label,
+            data: yVals,
+            fill: {
+              target: 'origin',
+              above: 'rgba(52, 152, 219, 0.2)'
+            },
+            borderColor: "#3498db",
+            borderWidth: 2,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'z'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'F(z)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function drawRootChart(canvasId, label, func, start, end, root) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      const step = (end - start) / 100;
+      
+      const xVals = [];
+      const yVals = [];
+      
+      for (let z = start; z <= end; z += step) {
+        xVals.push(z.toFixed(2));
+        yVals.push(func(z));
+      }
+
+      // Находим минимальное и максимальное значения для масштабирования
+      const minY = Math.min(...yVals);
+      const maxY = Math.max(...yVals);
+      
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: xVals,
+          datasets: [
+            {
+              label: label,
+              data: yVals,
+              fill: false,
+              borderColor: "#3498db",
+              borderWidth: 2,
+              tension: 0.1
+            },
+            {
+              label: "Нулевая линия",
+              data: xVals.map(() => 0),
+              borderColor: "#e74c3c",
+              borderWidth: 1,
+              borderDash: [5, 5],
+              pointRadius: 0
+            },
+            {
+              label: "Корень",
+              data: xVals.map((x, i) => Math.abs(parseFloat(x) - root) < step ? yVals[i] : null),
+              borderColor: "#2ecc71",
+              borderWidth: 3,
+              pointRadius: 5,
+              showLine: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: minY,
+                  yMax: maxY,
+                  xMin: root,
+                  xMax: root,
+                  borderColor: 'rgb(255, 99, 132)',
+                  borderWidth: 2,
+                  borderDash: [6, 6],
+                  label: {
+                    content: 'Корень: ' + root.toFixed(4),
+                    enabled: true,
+                    position: 'top'
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'z'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'F(z)'
+              }
             }
           }
         }
