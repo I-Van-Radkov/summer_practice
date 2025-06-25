@@ -117,6 +117,8 @@
     <p><strong>Площадь (Симпсон):</strong> <span id="areaSimp"></span></p>
     <p><strong>Разница методов:</strong> <span id="diff"></span></p>
     <p><strong>Корень уравнения F(z)=0:</strong> <span id="root"></span></p>
+
+    <button id="saveBtn" onclick="window.location.href='http:\\localhost:8080/download'">Сохранить результаты в CSV</button>
     
     <div class="method-info">
       <h3>Информация о методах</h3>
@@ -189,6 +191,7 @@
         // Отобразим данные
         document.getElementById("results").style.display = "block";
         document.getElementById("charts").style.display = "flex";
+        document.getElementById("saveBtn").style.display = "inline-block";
         
         document.getElementById("ya").textContent = data.y_a.toFixed(6);
         document.getElementById("zmax").textContent = data.z_max.toFixed(6);
