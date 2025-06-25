@@ -145,309 +145,211 @@
       <canvas id="chartRoot"></canvas>
     </div>
   </div>
-
   <script>
-    const form = document.getElementById("calcForm");
-    const errorMsg = document.getElementById("errorMsg");
+  const form = document.getElementById("calcForm");
+  const errorMsg = document.getElementById("errorMsg");
+  const charts = {}; // Хранилище графиков
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      errorMsg.textContent = "";
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    errorMsg.textContent = "";
 
-      const a = document.getElementById("a").value;
-      const c = document.getElementById("c").value;
-      const d = document.getElementById("d").value;
-      const eVal = document.getElementById("e").value;
+    const a = document.getElementById("a").value;
+    const c = document.getElementById("c").value;
+    const d = document.getElementById("d").value;
+    const eVal = document.getElementById("e").value;
 
-      if (!a || !c || !d || !eVal) {
-        errorMsg.textContent = "Пожалуйста, заполните все поля.";
-        return;
-      }
-
-      const payload = {
-        a: parseFloat(a),
-        c: parseFloat(c),
-        d: parseFloat(d),
-        e: parseFloat(eVal)
-      };
-
-      console.log("Отправка:", payload);
-
-      try {
-        const res = await fetch("http://localhost:8080/solve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error("Ошибка от сервера: " + errText);
-        }
-
-        const data = await res.json();
-        console.log("Ответ:", data);
-
-        // Отобразим данные
-        document.getElementById("results").style.display = "block";
-        document.getElementById("charts").style.display = "flex";
-        document.getElementById("saveBtn").style.display = "inline-block";
-        
-        document.getElementById("ya").textContent = data.y_a.toFixed(6);
-        document.getElementById("zmax").textContent = data.z_max.toFixed(6);
-        document.getElementById("fzmax").textContent = data.f_z_max.toFixed(6);
-        document.getElementById("areaTrap").textContent = data.area_trapezoid.toFixed(6);
-        document.getElementById("areaSimp").textContent = data.area_simpson.toFixed(6);
-        document.getElementById("diff").textContent = Math.abs(data.area_trapezoid - data.area_simpson).toFixed(6);
-        document.getElementById("root").textContent = data.zero_point.toFixed(6);
-
-        drawCharts(data, payload);
-
-      } catch (err) {
-        console.error(err);
-        errorMsg.textContent = "Ошибка: " + err.message;
-      }
-    });
-
-    function drawCharts(data, input) {
-      // Функция F(z) из задания
-      function F(z, yA) {
-        return 15 + Math.pow(Math.sin(z), 3) + yA*z - Math.pow(z, 2)/yA;
-      }
-
-      // Производная F'(z) - для демонстрации
-      function F_derivative(z, yA, h = 0.0001) {
-        return (F(z + h, yA) - F(z - h, yA)) / (2 * h);
-      }
-
-      // График функции F(z)
-      drawChart(
-        "chartFunc", 
-        "F(z) = 15 + sin³(z) + y(a)*z - z²/y(a)", 
-        z => F(z, data.y_a),
-        input.c, input.d, 0.1
-      );
-
-      // График производной F'(z)
-      drawChart(
-        "chartDerivative", 
-        "F'(z) - производная функции", 
-        z => F_derivative(z, data.y_a),
-        input.c, input.d, 0.1
-      );
-
-      // График площади под кривой
-      drawAreaChart(
-        "chartArea",
-        "Площадь под кривой F(z)",
-        z => F(z, data.y_a),
-        input.c, data.z_max
-      );
-
-      // График поиска корня
-      drawRootChart(
-        "chartRoot",
-        "Поиск корня F(z) = 0",
-        z => F(z, data.y_a),
-        input.c, input.d, data.zero_point
-      );
+    if (!a || !c || !d || !eVal) {
+      errorMsg.textContent = "Пожалуйста, заполните все поля.";
+      return;
     }
 
-    function drawChart(canvasId, label, func, start, end, step) {
-      const ctx = document.getElementById(canvasId).getContext("2d");
-      
-      const xVals = [];
-      const yVals = [];
-      
-      for (let z = start; z <= end; z += step) {
-        xVals.push(z.toFixed(2));
-        yVals.push(func(z));
+    const payload = {
+      a: parseFloat(a),
+      c: parseFloat(c),
+      d: parseFloat(d),
+      e: parseFloat(eVal)
+    };
+
+    console.log("Отправка:", payload);
+
+    try {
+      const res = await fetch("http://localhost:8080/solve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error("Ошибка от сервера: " + errText);
       }
 
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: xVals,
-          datasets: [{
+      const data = await res.json();
+      console.log("Ответ:", data);
+
+      document.getElementById("results").style.display = "block";
+      document.getElementById("charts").style.display = "flex";
+      document.getElementById("saveBtn").style.display = "inline-block";
+
+      document.getElementById("ya").textContent = data.y_a.toFixed(6);
+      document.getElementById("zmax").textContent = data.z_max.toFixed(6);
+      document.getElementById("fzmax").textContent = data.f_z_max.toFixed(6);
+      document.getElementById("areaTrap").textContent = data.area_trapezoid.toFixed(6);
+      document.getElementById("areaSimp").textContent = data.area_simpson.toFixed(6);
+      document.getElementById("diff").textContent = Math.abs(data.area_trapezoid - data.area_simpson).toFixed(6);
+      document.getElementById("root").textContent = data.zero_point.toFixed(6);
+
+      drawCharts(data, payload);
+
+    } catch (err) {
+      console.error(err);
+      errorMsg.textContent = "Ошибка: " + err.message;
+    }
+  });
+
+  function drawCharts(data, input) {
+    function F(z, yA) {
+      return 15 + Math.pow(Math.sin(z), 3) + yA * z - Math.pow(z, 2) / yA;
+    }
+
+    function F_derivative(z, yA, h = 0.0001) {
+      return (F(z + h, yA) - F(z - h, yA)) / (2 * h);
+    }
+
+    drawChart("chartFunc", "F(z) = 15 + sin³(z) + y(a)*z - z²/y(a)", z => F(z, data.y_a), input.c, input.d, 0.1);
+    drawChart("chartDerivative", "F'(z) - производная функции", z => F_derivative(z, data.y_a), input.c, input.d, 0.1);
+    drawAreaChart("chartArea", "Площадь под кривой F(z)", z => F(z, data.y_a), input.c, data.z_max);
+    drawRootChart("chartRoot", "Поиск корня F(z) = 0", z => F(z, data.y_a), input.c, input.d, data.zero_point);
+  }
+
+  function drawChart(canvasId, label, func, start, end, step) {
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    const xVals = [], yVals = [];
+    for (let z = start; z <= end; z += step) {
+      xVals.push(z.toFixed(2));
+      yVals.push(func(z));
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: xVals,
+        datasets: [{
+          label: label,
+          data: yVals,
+          fill: false,
+          borderColor: "#3498db",
+          borderWidth: 2,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, position: 'top' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'z' } },
+          y: { title: { display: true, text: 'F(z)' } }
+        }
+      }
+    });
+  }
+
+  function drawAreaChart(canvasId, label, func, start, end) {
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    const step = (end - start) / 100;
+    const xVals = [], yVals = [];
+    for (let z = start; z <= end; z += step) {
+      xVals.push(z.toFixed(2));
+      yVals.push(func(z));
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: xVals,
+        datasets: [{
+          label: label,
+          data: yVals,
+          fill: { target: 'origin', above: 'rgba(52, 152, 219, 0.2)' },
+          borderColor: "#3498db",
+          borderWidth: 2,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, position: 'top' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'z' } },
+          y: { title: { display: true, text: 'F(z)' } }
+        }
+      }
+    });
+  }
+
+  function drawRootChart(canvasId, label, func, start, end, root) {
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    if (charts[canvasId]) charts[canvasId].destroy();
+
+    const step = (end - start) / 100;
+    const xVals = [], yVals = [];
+    for (let z = start; z <= end; z += step) {
+      xVals.push(z.toFixed(2));
+      yVals.push(func(z));
+    }
+
+    charts[canvasId] = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: xVals,
+        datasets: [
+          {
             label: label,
             data: yVals,
             fill: false,
             borderColor: "#3498db",
             borderWidth: 2,
             tension: 0.1
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top'
-            }
           },
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'z'
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'F(z)'
-              }
-            }
+          {
+            label: "Нулевая линия",
+            data: xVals.map(() => 0),
+            borderColor: "#e74c3c",
+            borderWidth: 1,
+            borderDash: [5, 5],
+            pointRadius: 0
+          },
+          {
+            label: "Корень",
+            data: xVals.map((x, i) => Math.abs(parseFloat(x) - root) < step ? yVals[i] : null),
+            borderColor: "#2ecc71",
+            borderWidth: 3,
+            pointRadius: 5,
+            showLine: false
           }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, position: 'top' }
+        },
+        scales: {
+          x: { title: { display: true, text: 'z' } },
+          y: { title: { display: true, text: 'F(z)' } }
         }
-      });
-    }
-
-    function drawAreaChart(canvasId, label, func, start, end) {
-      const ctx = document.getElementById(canvasId).getContext("2d");
-      const step = (end - start) / 100;
-      
-      const xVals = [];
-      const yVals = [];
-      
-      for (let z = start; z <= end; z += step) {
-        xVals.push(z.toFixed(2));
-        yVals.push(func(z));
       }
-
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: xVals,
-          datasets: [{
-            label: label,
-            data: yVals,
-            fill: {
-              target: 'origin',
-              above: 'rgba(52, 152, 219, 0.2)'
-            },
-            borderColor: "#3498db",
-            borderWidth: 2,
-            tension: 0.1
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top'
-            }
-          },
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'z'
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'F(z)'
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function drawRootChart(canvasId, label, func, start, end, root) {
-      const ctx = document.getElementById(canvasId).getContext("2d");
-      const step = (end - start) / 100;
-      
-      const xVals = [];
-      const yVals = [];
-      
-      for (let z = start; z <= end; z += step) {
-        xVals.push(z.toFixed(2));
-        yVals.push(func(z));
-      }
-
-      // Находим минимальное и максимальное значения для масштабирования
-      const minY = Math.min(...yVals);
-      const maxY = Math.max(...yVals);
-      
-      new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: xVals,
-          datasets: [
-            {
-              label: label,
-              data: yVals,
-              fill: false,
-              borderColor: "#3498db",
-              borderWidth: 2,
-              tension: 0.1
-            },
-            {
-              label: "Нулевая линия",
-              data: xVals.map(() => 0),
-              borderColor: "#e74c3c",
-              borderWidth: 1,
-              borderDash: [5, 5],
-              pointRadius: 0
-            },
-            {
-              label: "Корень",
-              data: xVals.map((x, i) => Math.abs(parseFloat(x) - root) < step ? yVals[i] : null),
-              borderColor: "#2ecc71",
-              borderWidth: 3,
-              pointRadius: 5,
-              showLine: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top'
-            },
-            annotation: {
-              annotations: {
-                line1: {
-                  type: 'line',
-                  yMin: minY,
-                  yMax: maxY,
-                  xMin: root,
-                  xMax: root,
-                  borderColor: 'rgb(255, 99, 132)',
-                  borderWidth: 2,
-                  borderDash: [6, 6],
-                  label: {
-                    content: 'Корень: ' + root.toFixed(4),
-                    enabled: true,
-                    position: 'top'
-                  }
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'z'
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'F(z)'
-              }
-            }
-          }
-        }
-      });
-    }
-  </script>
+    });
+  }
+</script>
 </body>
 </html>
