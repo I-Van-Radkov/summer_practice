@@ -13,5 +13,5 @@ type Output struct {
 	FZMax     float64 `json:"f_z_max"`
 	AreaTrap  float64 `json:"area_trapezoid"`
 	AreaSimp  float64 `json:"area_simpson"`
-	ZeroPoint float64 `json:"zero_point"`
+	ZeroPoint string  `json:"zero_point"`
 }

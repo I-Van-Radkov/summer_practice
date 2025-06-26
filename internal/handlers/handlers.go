@@ -57,12 +57,7 @@ func SolveHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Вычислено areaSimpson: %v; areaTrapezoid: %v\n", areaSimpson, areaTrapezoid)
 
-	root, err := logic.FindRoot(input.C, input.D, input.E, yA)
-	if err != nil {
-		log.Printf("Ошибка: %v\n", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	root := logic.FindRoot(input.C, input.D, input.E, yA)
 
 	log.Printf("Вычислено root: %v\n", root)
 
@@ -134,7 +129,7 @@ func saveToCSV(data models.Output, filename string) error {
 		formatFloat(data.FZMax),
 		formatFloat(data.AreaTrap),
 		formatFloat(data.AreaSimp),
-		formatFloat(data.ZeroPoint),
+		data.ZeroPoint,
 	})
 
 	return nil

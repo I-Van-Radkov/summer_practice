@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Вычислительная задача №129</title>
+  <title>Радьков Иван БЭИ2301</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -96,7 +96,7 @@
   </style>
 </head>
 <body>
-  <h1>Вычислительная задача №129</h1>
+  <h1>Вариант №129</h1>
 
   <form id="calcForm">
     <label>Параметр a: <input type="number" id="a" step="any" value="1" required></label>
@@ -198,13 +198,14 @@
       document.getElementById("areaTrap").textContent = data.area_trapezoid.toFixed(6);
       document.getElementById("areaSimp").textContent = data.area_simpson.toFixed(6);
       document.getElementById("diff").textContent = Math.abs(data.area_trapezoid - data.area_simpson).toFixed(6);
-      document.getElementById("root").textContent = data.zero_point.toFixed(6);
+      document.getElementById("root").textContent = typeof data.zero_point === "number" ? data.zero_point.toFixed(6) : data.zero_point;
+
 
       drawCharts(data, payload);
 
     } catch (err) {
       console.error(err);
-      errorMsg.textContent = "Ошибка: " + err.message;
+      errorMsg.textContent = err.message;
     }
   });
 
